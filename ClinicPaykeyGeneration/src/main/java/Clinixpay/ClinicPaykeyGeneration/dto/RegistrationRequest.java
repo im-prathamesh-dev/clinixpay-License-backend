@@ -1,30 +1,33 @@
 package Clinixpay.ClinicPaykeyGeneration.dto;
 
-import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Pattern;
-import jakarta.validation.constraints.Size;
 import lombok.Data;
 
 @Data
 public class RegistrationRequest {
 
-    @NotBlank(message = "Full Name is required")
-    @Size(min = 3, message = "Full Name must be at least 3 characters")
+    // Common regex for email validation (RFC 5322 standard approximation)
+    private static final String EMAIL_REGEX = "^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,6}$";
+
+    @NotBlank(message = "Full name is required.")
     private String fullName;
 
-    @NotBlank(message = "Email is required")
-    @Email(message = "Email must be valid")
+    /**
+     * Replaced @Email annotation with a custom @Pattern regex.
+     * This regex is generally stricter than the default @Email implementation.
+     */
+    @NotBlank(message = "Email is required.")
+    @Pattern(regexp = EMAIL_REGEX, message = "Invalid email format. Please check for special characters or domain structure.")
     private String email;
 
-    @NotBlank(message = "Mobile number is required")
-    @Pattern(regexp = "^[0-9]{10}$", message = "Mobile number must be 10 digits")
+    @NotBlank(message = "Mobile number is required.")
+    @Pattern(regexp = "^[0-9]{10}$", message = "Mobile number must be 10 digits.")
     private String mobileNumber;
 
-    @NotNull(message = "Plan ID is required")
-    // --- UPDATED VALIDATION TO ALLOW PLAN 0 (FREE PLAN) ---
-    @Min(value = 0, message = "Plan ID must be 0 (Free), 1, 2, or 3")
-    private int planId;
+    @NotNull(message = "Plan ID is required.")
+    @Min(value = 0, message = "Invalid plan ID selected.")
+    private Integer planId;
 }

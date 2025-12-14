@@ -13,8 +13,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.FieldError;
+import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.HashMap;
 import java.util.Map;
 
 @RestController
@@ -42,18 +45,16 @@ public class RegistrationController {
 
             if (newUser.getKeyStatus() == KeyStatus.ACTIVE) {
                 // Scenario 1: Free Plan (Plan 0) - Registration is completed immediately.
-                // The key has been generated, saved, and emailed to the user.
                 String message = String.format(
                         "SUCCESS: Free Plan (%s) activated. A unique key has been sent to %s.",
                         newUser.getSelectedPlan(),
                         newUser.getEmail()
                 );
-                // Return structured JSON response for consistency (as discussed previously)
+                // Return structured JSON response
                 return ResponseEntity.ok(Map.of("message", message, "status", "ACTIVATED"));
 
             } else {
                 // Scenario 2: Paid Plans (Plan 1, 2, 3) - Razorpay Order created, payment pending.
-                // The frontend uses this response to open the Razorpay popup.
 
                 // Respond with the details the frontend needs to open the Razorpay popup
                 PaymentResponse response = new PaymentResponse();
@@ -97,10 +98,8 @@ public class RegistrationController {
         if (isValidSignature) {
             try {
                 // Complete the registration process (Plan 1, 2, or 3 logic)
-                // This updates status to ACTIVE, sets expiry, and sends the key via email.
                 registrationService.completeRegistration(request.getUserId(), request.getRazorpayPaymentId());
 
-                // 3. SUCCESS: Payment verified and key sent for Plan 1, 2, or 3.
                 return ResponseEntity.ok("Payment verified and registration completed. Key email sent successfully.");
 
             } catch (IllegalStateException e) {
@@ -115,5 +114,21 @@ public class RegistrationController {
             System.err.println("ALERT: Invalid Razorpay Signature detected for Order ID: " + request.getRazorpayOrderId());
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body("Payment verification failed: Invalid Signature.");
         }
+    }
+
+    /**
+     * Custom handler to catch MethodArgumentNotValidException thrown when @Valid fails.
+     * Returns a clear JSON map of field errors to the client with a 400 status.
+     */
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(MethodArgumentNotValidException.class)
+    public Map<String, String> handleValidationExceptions(MethodArgumentNotValidException ex) {
+        Map<String, String> errors = new HashMap<>();
+        ex.getBindingResult().getAllErrors().forEach((error) -> {
+            String fieldName = ((FieldError) error).getField();
+            String errorMessage = error.getDefaultMessage();
+            errors.put(fieldName, errorMessage);
+        });
+        return errors;
     }
 }
