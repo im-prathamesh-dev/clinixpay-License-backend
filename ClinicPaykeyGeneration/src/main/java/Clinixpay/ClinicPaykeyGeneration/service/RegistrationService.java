@@ -10,6 +10,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.time.temporal.ChronoUnit;
 import java.util.Map;
+import java.util.Optional; // Added import
 
 @Service
 public class RegistrationService {
@@ -36,6 +37,9 @@ public class RegistrationService {
         String planName = paymentService.getPlanName(request.getPlanId());
         boolean isFreePlan = planAmountPaise == 0L;
 
+        // Define a consistent registration timestamp for all time calculations
+        LocalDateTime registrationTime = LocalDateTime.now();
+
         // 3. Generate and Hash Key
         String plainLicensekey = keyGeneratorService.generateUnique12DigitKey();
         String hashedLicensekey = keyGeneratorService.hashKey(plainLicensekey);
@@ -47,6 +51,7 @@ public class RegistrationService {
         newUser.setSelectedPlan(planName);
         newUser.setPlanAmountPaise(planAmountPaise);
         newUser.setLicensekey(hashedLicensekey); // Store the HASHED key
+        newUser.setRegistrationTime(registrationTime); // Use the consistent timestamp
 
         // 4. Conditional logic for Free vs. Paid
         if (isFreePlan) {
@@ -55,8 +60,9 @@ public class RegistrationService {
             Map.Entry<Long, ChronoUnit> validity = paymentService.getPlanValidityDuration(request.getPlanId());
 
             newUser.setKeyStatus(KeyStatus.ACTIVE);
-            newUser.setKeyGenerationTime(LocalDateTime.now());
-            newUser.setKeyExpiryTime(LocalDateTime.now().plus(validity.getKey(), validity.getValue()));
+            newUser.setKeyGenerationTime(registrationTime); // Use consistent time
+            // Calculate expiry time based on consistent time
+            newUser.setKeyExpiryTime(registrationTime.plus(validity.getKey(), validity.getValue()));
 
             User savedUser = userRepository.save(newUser);
 
@@ -104,6 +110,9 @@ public class RegistrationService {
             throw new IllegalStateException("User is not in PENDING_PAYMENT status.");
         }
 
+        // --- CHNAGE 1: Use a single consistent timestamp for activation ---
+        LocalDateTime activationTime = LocalDateTime.now();
+
         // 1. DETERMINE DYNAMIC EXPIRY for Paid Plans
         int planId = 0;
         try {
@@ -115,14 +124,15 @@ public class RegistrationService {
         }
 
         Map.Entry<Long, ChronoUnit> validity = paymentService.getPlanValidityDuration(planId);
-        LocalDateTime expiryTime = LocalDateTime.now().plus(validity.getKey(), validity.getValue());
+        // Calculate expiry time based on the consistent activationTime
+        LocalDateTime expiryTime = activationTime.plus(validity.getKey(), validity.getValue());
 
         // --- Retrieve the plain key for the email BEFORE clearing it ---
         String plainLoginKey = user.getTempPlainLoginKey();
 
         // 2. Update User status, key validity, and payment details
         user.setKeyStatus(KeyStatus.ACTIVE);
-        user.setKeyGenerationTime(LocalDateTime.now());
+        user.setKeyGenerationTime(activationTime); // Use consistent time
         user.setKeyExpiryTime(expiryTime);
         user.setRazorpayPaymentId(paymentId);
 
@@ -151,6 +161,25 @@ public class RegistrationService {
         return completedUser;
     }
 
+    // --- CHNAGE 2: New method for cleaning up abandoned payments ---
+    /**
+     * Handles cleanup for users who abandon or explicitly cancel the payment process.
+     * Deletes the user record if the status is PENDING_PAYMENT.
+     * This is called by POST /api/register/cancel-payment/{userId}
+     */
+    public void deletePendingUser(String userId) {
+        Optional<User> userOptional = userRepository.findById(userId);
+
+        userOptional.ifPresent(user -> {
+            // Only delete if the status is still PENDING_PAYMENT
+            if (user.getKeyStatus() == KeyStatus.PENDING_PAYMENT) {
+                System.out.println("Cleaning up abandoned payment record for user: " + user.getEmail() + " (ID: " + userId + ")");
+                userRepository.delete(user);
+            }
+        });
+    }
+    // -----------------------------------------------------------------
+
 
     /**
      * VALIDATION/LOGIN FUNCTIONALITY:
@@ -174,7 +203,6 @@ public class RegistrationService {
         String storedHashedKey = user.getLicensekey();
 
         // This relies on your KeyGeneratorService having a method to check a plain string against a hash
-        // IMPORTANT: Ensure keyGeneratorService.checkKey() is implemented (e.g., using BCrypt.checkpw)
         boolean isKeyValid = keyGeneratorService.checkKey(plainLicenseKey, storedHashedKey);
 
         if (!isKeyValid) {

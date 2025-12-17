@@ -1,6 +1,6 @@
 package Clinixpay.ClinicPaykeyGeneration.controller;
 
-import Clinixpay.ClinicPaykeyGeneration.dto.LoginRequest; // <--- NEW IMPORT
+import Clinixpay.ClinicPaykeyGeneration.dto.LoginRequest;
 import Clinixpay.ClinicPaykeyGeneration.dto.PaymentResponse;
 import Clinixpay.ClinicPaykeyGeneration.dto.PaymentVerificationRequest;
 import Clinixpay.ClinicPaykeyGeneration.dto.RegistrationRequest;
@@ -118,7 +118,24 @@ public class RegistrationController {
     }
 
     /**
-     * 3. NEW ENDPOINT: Validates the user's provided email and license key to grant access.
+     * 3. NEW ENDPOINT: Allows the frontend to signal that the user explicitly canceled the payment.
+     * This immediately cleans up the unnecessary PENDING_PAYMENT record.
+     * - URL: POST http://localhost:8081/api/register/cancel-payment
+     */
+    @PostMapping("/cancel-payment/{userId}")
+    public ResponseEntity<String> cancelPayment(@PathVariable String userId) {
+        try {
+            registrationService.deletePendingUser(userId);
+            return ResponseEntity.ok("Pending user record deleted successfully due to payment cancellation/abandonment.");
+        } catch (Exception e) {
+            // Log if deletion fails for some reason (e.g., user not found or already processed)
+            System.err.println("Error deleting pending user " + userId + ": " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body("Failed to cleanup pending record.");
+        }
+    }
+
+    /**
+     * 4. ENDPOINT: Validates the user's provided email and license key to grant access.
      * - URL: POST http://localhost:8081/api/register/validate-license
      */
     @PostMapping("/validate-license")
