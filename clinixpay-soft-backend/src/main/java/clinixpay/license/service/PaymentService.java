@@ -30,9 +30,9 @@ public class PaymentService {
     public String getPlanName(int planId) {
         return switch (planId) {
             case 0 -> "Free Trial Plan 0";
-            case 1 -> "Basic Plan 1";
-            case 2 -> "Premium Plan 2";
-            case 3 -> "Enterprise Plan 3";
+            case 1 -> "Clinixpay-Gold";
+            case 2 -> "Clinixpay-Platinum";
+
             default -> throw new IllegalStateException("Invalid planId: " + planId);
         };
     }
@@ -43,9 +43,9 @@ public class PaymentService {
     public Long getPlanAmountPaise(int planId) {
         return switch (planId) {
             case 0 -> 0L;        // Free Plan (0 INR)
-            case 1 -> 500_00L;   // 500 INR
-            case 2 -> 1000_00L;  // 1000 INR
-            case 3 -> 2000_00L;  // 2000 INR
+            case 1 -> 16000_00L;   // 500 INR
+            case 2 -> 17000_00L;  // 1000 INR
+              // 2000 INR
             default -> throw new IllegalStateException("Invalid planId: " + planId);
         };
     }
@@ -56,10 +56,10 @@ public class PaymentService {
      */
     public Map.Entry<Long, ChronoUnit> getPlanValidityDuration(int planId) {
         return switch (planId) {
-            case 0 -> new AbstractMap.SimpleEntry<>(7L, ChronoUnit.DAYS);   // 7 Days Free Trial
-            case 1 -> new AbstractMap.SimpleEntry<>(30L, ChronoUnit.DAYS);  // 30 Days
-            case 2 -> new AbstractMap.SimpleEntry<>(90L, ChronoUnit.DAYS);  // 90 Days
-            case 3 -> new AbstractMap.SimpleEntry<>(365L, ChronoUnit.DAYS); // 365 Days (1 Year)
+            case 0 -> new AbstractMap.SimpleEntry<>(30L, ChronoUnit.DAYS);   // 30 Days Free Trial
+            case 1 -> new AbstractMap.SimpleEntry<>(365L, ChronoUnit.DAYS);  // 1 year
+            case 2 -> new AbstractMap.SimpleEntry<>(365L, ChronoUnit.DAYS);  // 1 year
+            // 365 Days (1 Year)
             default -> throw new IllegalStateException("Invalid planId: " + planId);
         };
     }
