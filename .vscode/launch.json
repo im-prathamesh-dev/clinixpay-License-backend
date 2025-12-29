@@ -1,0 +1,14 @@
+{
+    "configurations": [
+        {
+            "type": "java",
+            "name": "Spring Boot-ClinicPaykeyGenerationApplication<ClinicPaykeyGeneration>",
+            "request": "launch",
+            "cwd": "${workspaceFolder}",
+            "mainClass": "clinixpay.license.ClinicPaykeyGenerationApplication",
+            "projectName": "ClinicPaykeyGeneration",
+            "args": "",
+            "envFile": "${workspaceFolder}/.env"
+        }
+    ]
+}
