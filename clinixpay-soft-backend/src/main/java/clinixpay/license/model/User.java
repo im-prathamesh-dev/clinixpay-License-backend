@@ -20,32 +20,24 @@ public class User {
 
     private String mobileNumber;
 
-    /**
-     * NEW FIELD: Stores the ID of the plan selected (0, 1, or 2).
-     * This ensures the system knows exactly which validity period
-     * to apply after the payment is verified.
-     */
-    private Integer planId;
-
     // --- Key Generation Fields ---
     @Indexed(unique = true)
     private String licensekey;           // Stores the HASHED key for verification
 
-    /**
-     * Stores the plain key temporarily until payment is verified and email is sent.
-     * Cleared (set to null) immediately after successful activation for security.
-     */
+    // *** NEW FIELD: Stores the plain key temporarily until payment is verified and email is sent. ***
+    // Must be set to null immediately after successful key delivery.
     private String tempPlainLoginKey;
+    // ***************************
 
-    private KeyStatus keyStatus = KeyStatus.PENDING_PAYMENT;
+    private KeyStatus keyStatus = KeyStatus.PENDING_PAYMENT; // Default is PENDING_PAYMENT
     private LocalDateTime keyGenerationTime;
     private LocalDateTime keyExpiryTime;
 
     // --- Payment Fields ---
-    private String selectedPlan;      // Descriptive name (e.g., "Clinixpay-Gold")
-    private Long planAmountPaise;     // Amount in Paise
-    private String razorpayOrderId;   // ID for the transaction session
-    private String razorpayPaymentId; // Final ID after successful payment
+    private String selectedPlan;
+    private Long planAmountPaise; // Amount in the smallest currency unit (paise for INR)
+    private String razorpayOrderId; // ID received after creating the order
+    private String razorpayPaymentId; // ID received after successful payment
 
     private LocalDateTime registrationTime = LocalDateTime.now();
 }
