@@ -36,6 +36,7 @@ public class LicenseService {
         newUser.setFullName(request.getFullName());
         newUser.setEmail(request.getEmail());
         newUser.setMobileNumber(request.getMobileNumber());
+        newUser.setPlanId(request.getPlanId());
         newUser.setSelectedPlan(planName);
         newUser.setPlanAmountPaise(planAmountPaise);
         newUser.setLicensekey(hashedLicensekey);
@@ -45,9 +46,17 @@ public class LicenseService {
             newUser.setKeyStatus(KeyStatus.ACTIVE);
             newUser.setKeyGenerationTime(LocalDateTime.now());
             newUser.setKeyExpiryTime(LocalDateTime.now().plus(validity.getKey(), validity.getValue()));
+
             User savedUser = userRepository.save(newUser);
 
-            emailService.sendPaymentSuccessEmail(savedUser.getEmail(), savedUser.getFullName(), plainLicensekey, savedUser.getSelectedPlan(), savedUser.getPlanAmountPaise());
+            emailService.sendPaymentSuccessEmail(
+                    savedUser.getEmail(),
+                    savedUser.getFullName(),
+                    plainLicensekey,
+                    savedUser.getSelectedPlan(),
+                    savedUser.getPlanAmountPaise(),
+                    validity.getKey()
+            );
             return savedUser;
         } else {
             newUser.setKeyStatus(KeyStatus.PENDING_PAYMENT);
@@ -62,8 +71,9 @@ public class LicenseService {
     public User completeLicenseActivation(String userId, String paymentId) {
         User user = userRepository.findById(userId).orElseThrow(() -> new IllegalStateException("User not found"));
 
-        // Dynamic Plan ID extraction for expiry logic
-        int planId = 1; // Default
+        Integer planId = user.getPlanId();
+        if (planId == null) planId = 1;
+
         Map.Entry<Long, ChronoUnit> validity = paymentService.getPlanValidityDuration(planId);
 
         String plainLoginKey = user.getTempPlainLoginKey();
@@ -74,23 +84,32 @@ public class LicenseService {
         user.setTempPlainLoginKey(null);
 
         User completedUser = userRepository.save(user);
-        emailService.sendPaymentSuccessEmail(completedUser.getEmail(), completedUser.getFullName(), plainLoginKey, completedUser.getSelectedPlan(), completedUser.getPlanAmountPaise());
+
+        emailService.sendPaymentSuccessEmail(
+                completedUser.getEmail(),
+                completedUser.getFullName(),
+                plainLoginKey,
+                completedUser.getSelectedPlan(),
+                completedUser.getPlanAmountPaise(),
+                validity.getKey()
+        );
         return completedUser;
     }
 
-    // FIX: Removed 'static' and used 'userRepository' bean
+    /**
+     * FIX FOR THE "CANNOT FIND SYMBOL" ERROR:
+     * Added String return type and logic for ALREADY_ACTIVE status.
+     */
     public String deletePendingUser(String userId) {
         Optional<User> userOptional = userRepository.findById(userId);
 
         if (userOptional.isPresent()) {
             User user = userOptional.get();
 
-            // Check if user is already ACTIVE
             if (user.getKeyStatus() == KeyStatus.ACTIVE) {
                 return "ALREADY_ACTIVE";
             }
 
-            // If PENDING, delete them
             if (user.getKeyStatus() == KeyStatus.PENDING_PAYMENT) {
                 userRepository.delete(user);
                 return "DELETED";

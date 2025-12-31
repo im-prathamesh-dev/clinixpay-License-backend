@@ -45,7 +45,7 @@ public class PaymentService {
             case 0 -> 0L;        // Free Plan (0 INR)
             case 1 -> 16000_00L;   // 500 INR
             case 2 -> 17000_00L;  // 1000 INR
-              // 2000 INR
+            // 2000 INR
             default -> throw new IllegalStateException("Invalid planId: " + planId);
         };
     }
